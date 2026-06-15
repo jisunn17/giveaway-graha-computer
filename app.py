@@ -37,6 +37,7 @@ def scrape_instagram(post_url, limit=None):
     
     try:
         media_pk = cl.media_pk_from_code(shortcode)
+        media_info = cl.media_info(media_pk)
         comments = cl.media_comments(media_pk, amount=0)
         
         result = []
@@ -52,7 +53,7 @@ def scrape_instagram(post_url, limit=None):
         
         return {
             "platform": "instagram",
-            "total_raw": len(comments),
+            "total_raw": media_info.comment_count or len(comments),
             "total_unique": len(result),
             "comments": result
         }

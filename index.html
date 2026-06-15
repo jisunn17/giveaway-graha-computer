@@ -108,6 +108,10 @@
             <div class="card">
                 <label>💬 KOMENTAR <span class="hint">— Username otomatis terdeteksi dari link postingan</span></label>
                 <textarea id="ig-comments" placeholder="Klik tombol 'Ambil Komentar' atau paste manual...&#10;&#10;Satu @username per baris"></textarea>
+                <div style="display:flex;gap:8px;margin-top:8px">
+                    <button class="btn-copy" onclick="copyAllFromText('ig')" style="flex:1;padding:10px;font-size:13px">📋 Copy Semua Username</button>
+                    <button class="btn-copy" onclick="clearText('ig')" style="padding:10px;font-size:13px">🗑️ Clear</button>
+                </div>
                 <div class="stats">
                     <div class="stat-box"><div class="num" id="ig-total">0</div><div class="lbl">KOMENTAR</div></div>
                     <div class="stat-box"><div class="num" id="ig-valid">0</div><div class="lbl">UNIK</div></div>
@@ -136,6 +140,10 @@
             <div class="card">
                 <label>💬 KOMENTAR <span class="hint">— Paste @username TikTok di sini (satu per baris)</span></label>
                 <textarea id="tt-comments" placeholder="Contoh:&#10;@username1&#10;@username2&#10;@username3&#10;&#10;Paste semua username yang komentar di video TikTok"></textarea>
+                <div style="display:flex;gap:8px;margin-top:8px">
+                    <button class="btn-copy" onclick="copyAllFromText('tt')" style="flex:1;padding:10px;font-size:13px">📋 Copy Semua Username</button>
+                    <button class="btn-copy" onclick="clearText('tt')" style="padding:10px;font-size:13px">🗑️ Clear</button>
+                </div>
                 <div class="stats">
                     <div class="stat-box"><div class="num" id="tt-total">0</div><div class="lbl">KOMENTAR</div></div>
                     <div class="stat-box"><div class="num" id="tt-valid">0</div><div class="lbl">UNIK</div></div>
