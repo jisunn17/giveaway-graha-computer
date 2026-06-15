@@ -31,15 +31,12 @@ def scrape_instagram(post_url, limit=None):
     shortcode = match.group(1)
     
     # Login with session
+    from urllib.parse import unquote
     cl = Client()
-    session_file = os.path.expanduser("~/.hermes/secrets/ig_session.json")
+    session_id = unquote('76878440476%3AeHvDx6LZZCgrsp%3A7%3AAYje9qAI51eT1WTPQQ-FNhnoZwKzO7lmy6pJa58WbA')
     
     try:
-        if os.path.exists(session_file):
-            cl.load_settings(session_file)
-            cl.login_by_sessionid("76878440476")
-        else:
-            return {"error": "Instagram session not found"}
+        cl.login_by_sessionid(session_id)
     except Exception as e:
         return {"error": f"Instagram login failed: {str(e)}"}
     
