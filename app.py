@@ -89,7 +89,7 @@ def scrape_tiktok(video_url, limit=None):
     limit = limit or 200
     
     # Resolve video URL
-    resolved_url, video_id = resolve_tiktok_url(video_url)
+    video_id = resolve_tiktok_url(video_url)
     if not video_id:
         return {"error": "Could not extract TikTok video ID", "comments": [], "total_raw": 0, "total_unique": 0}
     
