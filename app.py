@@ -4,7 +4,6 @@ Instagram + TikTok comment scraper for giveaway picking
 """
 import os
 import re
-import json
 import subprocess
 from urllib.parse import unquote
 from flask import Flask, request, jsonify, send_from_directory
@@ -84,108 +83,51 @@ def resolve_tiktok_url(video_url):
 
 
 def scrape_tiktok(video_url, limit=None):
-    """Scrape TikTok comments — tries tikwm API first, falls back to Playwright subprocess."""
-    import time
-    limit = limit or 200
-    
-    # Resolve video URL
     video_id = resolve_tiktok_url(video_url)
     if not video_id:
-        return {"error": "Could not extract TikTok video ID", "comments": [], "total_raw": 0, "total_unique": 0}
+        return {"error": "Could not extract TikTok video ID"}
     
-    # Method 1: tikwm.com API (free, reliable, no auth needed)
     try:
-        all_comments = []
-        cursor = 0
-        while len(all_comments) < limit:
-            resp = req.post('https://www.tikwm.com/api/comment/list', data={
-                'url': f'https://www.tiktok.com/video/{video_id}',
-                'count': 50,
-                'cursor': cursor,
-            }, timeout=20)
-            
-            if resp.status_code != 200:
-                break
-            
-            data = resp.json()
-            if data.get('code') != 0:
-                break
-            
-            comments = data.get('data', {}).get('comments', [])
-            if not comments:
-                break
-            
-            all_comments.extend(comments)
-            cursor += len(comments)
-            
-            if len(comments) < 50:
-                break
-            
-            time.sleep(0.5)
-        
-        if all_comments:
-            result = []
-            seen = set()
-            for c in all_comments:
-                user = c.get('user', {})
-                username = user.get('unique_id', '')
-                if not username or username.lower() in seen:
-                    continue
-                seen.add(username.lower())
-                result.append({
-                    "username": username,
-                    "text": c.get('text', '')[:200],
-                    "likes": int(c.get('digg_count', 0)),
-                })
-            
-            return {
-                "platform": "tiktok",
-                "total_raw": len(all_comments),
-                "total_unique": len(result),
-                "comments": result[:limit],
-                "method": "tikwm"
-            }
-    except Exception:
-        pass
-    
-    # Method 2: Playwright via subprocess (fallback)
-    try:
-        script_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'tiktok_playwright.py')
-        result = subprocess.run(
-            ['python3', script_path, video_url, str(limit)],
-            capture_output=True, text=True, timeout=120
-        )
-        if result.returncode == 0 and result.stdout.strip():
-            data = json.loads(result.stdout.strip())
-            if data.get('total_unique', 0) > 0:
-                return data
-    except Exception:
-        pass
-    
-    # Method 3: Pikkik API fallback
-    try:
+        # Step 1: Trigger async fetch on pikkik
         req.get(f'https://pikkik.com/fetch/async/{video_id}', timeout=30)
-        time.sleep(3)
+        
+        # Step 2: Get comments from /winners endpoint
         resp = req.get('https://pikkik.com/winners', params={
-            'vid': video_id, 'nodupes': 'true', 'count': '9999',
-            'mentions': '0', 'keywords': '', 'html': '0',
+            'vid': video_id,
+            'nodupes': 'true',
+            'count': '9999',
+            'mentions': '0',
+            'keywords': '',
+            'html': '0',
         }, timeout=30)
-        if resp.status_code == 200:
-            comments_data = resp.json()
-            if comments_data:
-                result = []
-                seen = set()
-                for c in comments_data:
-                    username = c.get('unique_name', '')
-                    if not username or username.lower() in seen:
-                        continue
-                    seen.add(username.lower())
-                    result.append({"username": username, "text": c.get('comment_text', '')[:200], "likes": int(c.get('likes', 0))})
-                return {"platform": "tiktok", "total_raw": len(comments_data), "total_unique": len(result), "comments": result[:limit], "method": "pikkik"}
-    except Exception:
-        pass
-    
-    return {"error": "All TikTok methods failed", "comments": [], "total_raw": 0, "total_unique": 0}
+        
+        if resp.status_code != 200:
+            return {"error": f"Pikkik API error: HTTP {resp.status_code}"}
+        
+        comments_data = resp.json()
+        
+        # Step 3: Extract unique usernames
+        result = []
+        seen = set()
+        for c in comments_data:
+            username = c.get('unique_name', '')
+            if not username or username.lower() in seen:
+                continue
+            seen.add(username.lower())
+            result.append({
+                "username": username,
+                "text": c.get('comment_text', '')[:200],
+                "likes": int(c.get('likes', 0)),
+            })
+        
+        return {
+            "platform": "tiktok",
+            "total_raw": len(comments_data),
+            "total_unique": len(result),
+            "comments": result
+        }
+    except Exception as e:
+        return {"error": f"TikTok scraping failed: {str(e)}"}
 
 
 # ============================================================
