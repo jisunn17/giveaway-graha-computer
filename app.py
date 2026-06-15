@@ -217,15 +217,29 @@ async def scrape_tiktok_async(video_url, limit=None):
 
 
 def scrape_tiktok(video_url, limit=None):
-    """Sync wrapper for TikTok scraping"""
-    try:
-        loop = asyncio.get_event_loop()
-        if loop.is_running():
-            import nest_asyncio
-            nest_asyncio.apply()
-        return asyncio.run(scrape_tiktok_async(video_url, limit))
-    except Exception as e:
-        return {"error": str(e)}
+    """Sync wrapper for TikTok scraping using dedicated thread with event loop"""
+    import threading
+    result = [None]
+    error = [None]
+    
+    def run_in_thread():
+        try:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            result[0] = loop.run_until_complete(scrape_tiktok_async(video_url, limit))
+            loop.close()
+        except Exception as e:
+            error[0] = str(e)
+    
+    t = threading.Thread(target=run_in_thread)
+    t.start()
+    t.join(timeout=120)
+    
+    if error[0]:
+        return {"error": error[0]}
+    if result[0] is None:
+        return {"error": "TikTok scraping timed out"}
+    return result[0]
 
 
 # ============================================================
@@ -260,6 +274,13 @@ def scrape():
         result = scrape_tiktok(post_url, limit)
     else:
         return jsonify({"error": f"Unsupported platform: {platform}"}), 400
+    
+    # Normalize response for frontend (expects total_raw, total_unique)
+    if 'error' not in result:
+        total_raw = result.get('total_comments', 0)
+        total_unique = result.get('unique_users', 0)
+        result['total_raw'] = total_raw
+        result['total_unique'] = total_unique
     
     return jsonify(result)
 
