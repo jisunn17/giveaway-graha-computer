@@ -1,37 +1,30 @@
-#!/usr/bin/env python3
 """
 Giveaway App - Graha Computer Purwokerto
 Instagram + TikTok comment scraper for giveaway picking
 """
 import os
-import json
-import asyncio
-import traceback
+import re
+import subprocess
+from urllib.parse import unquote
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
+import requests as req
 
 app = Flask(__name__, static_folder='.')
 CORS(app)
+
 
 # ============================================================
 # INSTAGRAM - Full scraping via instagrapi
 # ============================================================
 def scrape_instagram(post_url, limit=None):
-    """Scrape ALL comments from Instagram post using instagrapi"""
     from instagrapi import Client
     
-    # Extract shortcode from URL
-    import re
-    match = re.search(r'instagram\.com/p/([^/]+)', post_url)
-    if not match:
-        match = re.search(r'instagram\.com/reel/([^/]+)', post_url)
+    match = re.search(r'instagram\.com/(?:p|reel|tv)/([^/]+)', post_url)
     if not match:
         return {"error": "Invalid Instagram URL"}
     
     shortcode = match.group(1)
-    
-    # Login with session
-    from urllib.parse import unquote
     cl = Client()
     session_id = unquote('76878440476%3AeHvDx6LZZCgrsp%3A7%3AAYje9qAI51eT1WTPQQ-FNhnoZwKzO7lmy6pJa58WbA')
     
@@ -42,7 +35,7 @@ def scrape_instagram(post_url, limit=None):
     
     try:
         media_pk = cl.media_pk_from_code(shortcode)
-        comments = cl.media_comments(media_pk, amount=0)  # 0 = all
+        comments = cl.media_comments(media_pk, amount=0)
         
         result = []
         seen = set()
@@ -53,14 +46,12 @@ def scrape_instagram(post_url, limit=None):
                 result.append({
                     "username": username,
                     "text": c.text[:200] if c.text else "",
-                    "timestamp": str(c.created_at_utc) if c.created_at_utc else ""
                 })
         
         return {
             "platform": "instagram",
-            "post_url": post_url,
-            "total_comments": len(comments),
-            "unique_users": len(result),
+            "total_raw": len(comments),
+            "total_unique": len(result),
             "comments": result
         }
     except Exception as e:
@@ -68,178 +59,75 @@ def scrape_instagram(post_url, limit=None):
 
 
 # ============================================================
-# TIKTOK - Full scraping via Playwright + X-Bogus
+# TIKTOK - Resolve short URL + pikkik API
 # ============================================================
-_browser = None
-_playwright = None
-
-async def get_browser():
-    global _browser, _playwright
-    if _browser is None:
-        from playwright.async_api import async_playwright
-        _playwright = await async_playwright().start()
-        _browser = await _playwright.chromium.launch(
-            headless=True,
-            args=['--no-sandbox', '--disable-setuid-sandbox']
-        )
-    return _browser
-
-async def scrape_tiktok_async(video_url, limit=None):
-    """Scrape TikTok comments via Playwright + X-Bogus signing"""
-    import re
-    
-    # Extract video ID
-    video_id = None
+def resolve_tiktok_url(video_url):
     match = re.search(r'/video/(\d+)', video_url)
     if match:
-        video_id = match.group(1)
-    else:
-        # Try short URL - resolve it
-        try:
-            resp = requests.head(video_url, allow_redirects=True, timeout=10)
-            match = re.search(r'/video/(\d+)', resp.url)
-            if match:
-                video_id = match.group(1)
-        except:
-            pass
-    
-    if not video_id:
-        return {"error": "Could not extract TikTok video ID"}
-    
-    browser = await get_browser()
-    context = await browser.new_context(
-        user_agent='Mozilla/5.0 (Windows NT 1.0; Win64; x64) AppleWebKit/537.36'
-    )
-    page = await context.new_page()
+        return match.group(1)
     
     try:
-        # Navigate to TikTok to get cookies/tokens
-        await page.goto('https://www.tiktok.com/@tiktok', wait_until='domcontentloaded', timeout=30000)
-        await asyncio.sleep(2)
-        
-        # Fetch comments via TikTok API with X-Bogus
-        all_comments = []
-        cursor = 0
-        has_more = True
-        
-        while has_more and (limit is None or len(all_comments) < limit):
-            api_url = f'https://www.tiktok.com/api/comment/list/?aweme_id={video_id}&cursor={cursor}&count=50'
-            
-            # Generate X-Bogus via page context
-            try:
-                signed_url = await page.evaluate(f'''
-                    () => {{
-                        try {{
-                            return window._xbogus ? window._xbogus("{api_url}") : null;
-                        }} catch(e) {{
-                            return null;
-                        }}
-                    }}
-                ''')
-            except:
-                signed_url = None
-            
-            fetch_url = signed_url if signed_url else api_url
-            
-            # Fetch via page context
-            data = await page.evaluate(f'''
-                async () => {{
-                    try {{
-                        const resp = await fetch("{fetch_url}", {{
-                            headers: {{
-                                'User-Agent': navigator.userAgent
-                            }}
-                        }});
-                        return await resp.json();
-                    }} catch(e) {{
-                        return {{error: e.message}};
-                    }}
-                }}
-            ''')
-            
-            if not data or data.get('error') or not data.get('comments'):
-                break
-            
-            for c in data['comments']:
-                comment = {
-                    "username": c.get('user', {}).get('unique_id', 'unknown'),
-                    "text": c.get('text', '')[:200],
-                    "likes": c.get('digg_count', 0)
-                }
-                all_comments.append(comment)
-                
-                # Also fetch replies
-                try:
-                    reply_url = f'https://www.tiktok.com/api/comment/list/reply/?comment_id={c.get("cid","")}&cursor=0&count=50'
-                    replies = await page.evaluate(f'''
-                        async () => {{
-                            try {{
-                                const resp = await fetch("{reply_url}");
-                                return await resp.json();
-                            }} catch(e) {{
-                                return null;
-                            }}
-                        }}
-                    ''')
-                    if replies and replies.get('comments'):
-                        for r in replies['comments']:
-                            all_comments.append({
-                                "username": r.get('user', {}).get('unique_id', 'unknown'),
-                                "text": r.get('text', '')[:200],
-                                "likes": r.get('digg_count', 0)
-                            })
-                except:
-                    pass
-            
-            has_more = data.get('has_more', 0) == 1
-            cursor = data.get('cursor', cursor + 50)
-        
-        # Deduplicate
-        seen = set()
-        unique = []
-        for c in all_comments:
-            if c['username'] not in seen:
-                seen.add(c['username'])
-                unique.append(c)
-        
-        return {
-            "platform": "tiktok",
-            "video_url": video_url,
-            "total_comments": len(all_comments),
-            "unique_users": len(unique),
-            "comments": unique
-        }
-    
-    except Exception as e:
-        return {"error": f"TikTok scraping failed: {str(e)}"}
-    finally:
-        await context.close()
+        result = subprocess.run(
+            f'curl -sI -L --max-time 10 "{video_url}"',
+            shell=True, capture_output=True, text=True, timeout=15
+        )
+        for line in result.stdout.split('\n'):
+            if 'location:' in line.lower():
+                loc = line.split(':', 1)[1].strip()
+                m = re.search(r'/video/(\d+)', loc)
+                if m:
+                    return m.group(1)
+    except:
+        pass
+    return None
 
 
 def scrape_tiktok(video_url, limit=None):
-    """Sync wrapper for TikTok scraping using dedicated thread with event loop"""
-    import threading
-    result = [None]
-    error = [None]
+    video_id = resolve_tiktok_url(video_url)
+    if not video_id:
+        return {"error": "Could not extract TikTok video ID"}
     
-    def run_in_thread():
-        try:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            result[0] = loop.run_until_complete(scrape_tiktok_async(video_url, limit))
-            loop.close()
-        except Exception as e:
-            error[0] = str(e)
-    
-    t = threading.Thread(target=run_in_thread)
-    t.start()
-    t.join(timeout=120)
-    
-    if error[0]:
-        return {"error": error[0]}
-    if result[0] is None:
-        return {"error": "TikTok scraping timed out"}
-    return result[0]
+    try:
+        # Step 1: Trigger async fetch on pikkik
+        req.get(f'https://pikkik.com/fetch/async/{video_id}', timeout=30)
+        
+        # Step 2: Get comments from /winners endpoint
+        resp = req.get('https://pikkik.com/winners', params={
+            'vid': video_id,
+            'nodupes': 'true',
+            'count': '9999',
+            'mentions': '0',
+            'keywords': '',
+            'html': '0',
+        }, timeout=30)
+        
+        if resp.status_code != 200:
+            return {"error": f"Pikkik API error: HTTP {resp.status_code}"}
+        
+        comments_data = resp.json()
+        
+        # Step 3: Extract unique usernames
+        result = []
+        seen = set()
+        for c in comments_data:
+            username = c.get('unique_name', '')
+            if not username or username.lower() in seen:
+                continue
+            seen.add(username.lower())
+            result.append({
+                "username": username,
+                "text": c.get('comment_text', '')[:200],
+                "likes": int(c.get('likes', 0)),
+            })
+        
+        return {
+            "platform": "tiktok",
+            "total_raw": len(comments_data),
+            "total_unique": len(result),
+            "comments": result
+        }
+    except Exception as e:
+        return {"error": f"TikTok scraping failed: {str(e)}"}
 
 
 # ============================================================
@@ -254,12 +142,10 @@ def scrape():
     data = request.json
     post_url = data.get('url', '')
     platform = data.get('platform', 'auto')
-    limit = data.get('limit')
     
     if not post_url:
         return jsonify({"error": "URL is required"}), 400
     
-    # Auto-detect platform
     if platform == 'auto':
         if 'instagram' in post_url or 'instagr.am' in post_url:
             platform = 'instagram'
@@ -269,18 +155,11 @@ def scrape():
             return jsonify({"error": "Unknown platform"}), 400
     
     if platform == 'instagram':
-        result = scrape_instagram(post_url, limit)
+        result = scrape_instagram(post_url)
     elif platform == 'tiktok':
-        result = scrape_tiktok(post_url, limit)
+        result = scrape_tiktok(post_url)
     else:
         return jsonify({"error": f"Unsupported platform: {platform}"}), 400
-    
-    # Normalize response for frontend (expects total_raw, total_unique)
-    if 'error' not in result:
-        total_raw = result.get('total_comments', 0)
-        total_unique = result.get('unique_users', 0)
-        result['total_raw'] = total_raw
-        result['total_unique'] = total_unique
     
     return jsonify(result)
 
