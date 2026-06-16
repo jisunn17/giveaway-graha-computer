@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Giveaway Graha Computer - Filter Edition</title>
+    <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Segoe UI',sans-serif;background:#f0f2f5;min-height:100vh}
+    .top-bar{background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;padding:16px 20px;display:flex;align-items:center;gap:12px}
+    .top-bar h1{font-size:20px;font-weight:700}
+    .top-bar small{opacity:.8;font-size:11px}
+    .main{max-width:960px;margin:20px auto;padding:0 16px}
+    /* Tabs */
+    .tabs{display:flex;gap:8px;margin-bottom:20px}
+    .tab-btn{flex:1;padding:12px;border:none;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;transition:.2s;display:flex;align-items:center;justify-content:center;gap:8px}
+    .tab-btn.ig{background:linear-gradient(135deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);color:#fff}
+    .tab-btn.tt{background:#fff;color:#333;border:2px solid #e5e7eb}
+    .tab-btn.tt.active{background:linear-gradient(135deg,#25f4ee,#fe2c55);color:#fff;border-color:transparent}
+    .tab-btn.ig.active{box-shadow:0 4px 15px rgba(220,39,67,.4)}
+    .tab-btn.tt.active{box-shadow:0 4px 15px rgba(254,44,85,.4)}
+    /* Card */
+    .card{background:#fff;border-radius:16px;padding:24px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+    .card label{font-size:13px;font-weight:600;color:#374151;display:block;margin-bottom:8px}
+    .card input[type=text],.card textarea{width:100%;padding:12px 16px;border:2px solid #e5e7eb;border-radius:10px;font-size:14px;transition:.2s;font-family:inherit}
+    .card input[type=text]:focus,.card textarea:focus{outline:none;border-color:#6366f1}
+    .card textarea{height:120px;resize:vertical}
+    .hint{font-size:11px;color:#9ca3af;margin-top:4px}
+    /* Stats */
+    .stats{display:flex;gap:12px;margin-top:12px}
+    .stat-box{flex:1;background:#f8fafc;border-radius:10px;padding:10px;text-align:center}
+    .stat-box .num{font-size:22px;font-weight:700;color:#6366f1}
+    .stat-box .lbl{font-size:11px;color:#9ca3af}
+    /* Winner count */
+    .winner-ctrl{display:flex;align-items:center;gap:12px;margin:12px 0}
+    .winner-ctrl button{width:36px;height:36px;border:2px solid #e5e7eb;background:#fff;border-radius:8px;font-size:18px;cursor:pointer}
+    .winner-ctrl button:hover{border-color:#6366f1;color:#6366f1}
+    .winner-ctrl input{width:50px;text-align:center;font-size:18px;font-weight:700;border:2px solid #e5e7eb;border-radius:8px;padding:6px}
+    /* Buttons */
+    .btn-spin{width:100%;padding:16px;border:none;border-radius:12px;font-size:18px;font-weight:700;cursor:pointer;color:#fff;background:linear-gradient(135deg,#6366f1,#8b5cf6);transition:.2s}
+    .btn-spin:hover{transform:translateY(-2px);box-shadow:0 8px 25px rgba(99,102,241,.4)}
+    .btn-spin:disabled{opacity:.5;cursor:not-allowed;transform:none}
+    .btn-fetch{width:100%;padding:12px;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;color:#fff;background:linear-gradient(135deg,#10b981,#059669);margin-top:8px;transition:.2s}
+    .btn-fetch:hover{box-shadow:0 4px 15px rgba(16,185,129,.4)}
+    .btn-fetch:disabled{opacity:.5;cursor:not-allowed}
+    /* Overlay */
+    .overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;z-index:100}
+    .overlay.show{display:flex}
+    .modal{background:#fff;border-radius:20px;padding:30px;max-width:440px;width:90%;text-align:center;position:relative}
+    .modal h2{font-size:20px;margin-bottom:16px}
+    /* Wheel */
+    .wheel-wrap{position:relative;width:320px;height:320px;margin:0 auto}
+    .wheel-wrap canvas{width:100%;height:100%}
+    .wheel-pointer{position:absolute;top:-8px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:14px solid transparent;border-right:14px solid transparent;border-top:28px solid #ef4444;z-index:2;filter:drop-shadow(0 2px 4px rgba(0,0,0,.3))}
+    /* Winner display */
+    .winner-display{display:none;text-align:center;padding:20px}
+    .winner-display.show{display:block}
+    .winner-card{background:linear-gradient(135deg,#fbbf24,#f59e0b);border-radius:16px;padding:24px;margin:16px auto;max-width:320px}
+    .winner-card .trophy{font-size:48px}
+    .winner-card .name{font-size:24px;font-weight:700;color:#92400e;margin:8px 0}
+    .winner-card .tag{font-size:13px;color:#a16207}
+    /* Winner action buttons */
+    .winner-actions{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;justify-content:center}
+    .winner-actions button{padding:10px 16px;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;transition:.2s}
+    .winner-actions button:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.15)}
+    .btn-comment{background:linear-gradient(135deg,#3b82f6,#2563eb);color:#fff}
+    .btn-profile{background:linear-gradient(135deg,#10b981,#059669);color:#fff}
+    .btn-whatsapp{background:linear-gradient(135deg,#25d366,#128c7e);color:#fff}
+    /* Comment popup */
+    .comment-popup{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:300}
+    .comment-popup.show{display:flex}
+    .comment-popup-box{background:#fff;border-radius:20px;padding:28px;max-width:420px;width:90%;position:relative;animation:popIn .3s ease}
+    @keyframes popIn{from{transform:scale(.8);opacity:0}to{transform:scale(1);opacity:1}}
+    .comment-popup-box h3{font-size:16px;color:#374151;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+    .comment-popup-box .comment-text{background:#f8fafc;border-radius:12px;padding:16px;font-size:14px;color:#1f2937;line-height:1.6;border-left:4px solid #6366f1;max-height:200px;overflow-y:auto}
+    .comment-popup-box .comment-user{font-size:13px;color:#6366f1;font-weight:600;margin-bottom:8px}
+    .comment-popup-box .close-popup{position:absolute;top:12px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:#9ca3af}
+    .comment-popup-box .close-popup:hover{color:#374151}
+    .comment-notfound{color:#9ca3af;font-style:italic;text-align:center;padding:20px}
+    .btn-row{display:flex;gap:8px;margin-top:16px}
+    .btn-row button{flex:1;padding:12px;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer}
+    .btn-again{background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff}
+    .btn-copy{background:#f3f4f6;color:#374151}
+    /* Winners list */
+    .winners-list{margin-top:16px}
+    .winners-list h3{font-size:15px;color:#374151;margin-bottom:8px}
+    .winner-item{display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f8fafc;border-radius:8px;margin-bottom:4px;font-size:13px}
+    .winner-item .medal{font-size:16px}
+    .winner-item .wk{font-weight:600;color:#6366f1}
+    /* Loading */
+    .spinner{display:inline-block;width:20px;height:20px;border:3px solid #e5e7eb;border-top-color:#6366f1;border-radius:50%;animation:spin .6s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .status{padding:10px;border-radius:8px;font-size:13px;margin-top:8px;display:none}
+    .status.info{display:block;background:#eff6ff;color:#3b82f6}
+    .status.error{display:block;background:#fef2f2;color:#ef4444}
+    .status.success{display:block;background:#f0fdf4;color:#22c55e}
+    /* Confetti */
+    .confetti-piece{position:fixed;width:10px;height:10px;z-index:200;pointer-events:none}
+    /* Tab content */
+    .tab-content{display:none}
+    .tab-content.active{display:block}
+    </style>
+</head>
+<body>
+    <div class="top-bar">
+        <div>
+            <h1>🎁 GIVEAWAY</h1>
+            <small>GRAHA COMPUTER PURWOKERTO</small>
+        </div>
+    </div>
+
+    <div class="main">
+        <div class="tabs">
+            <button class="tab-btn ig active" onclick="switchTab('instagram')">📷 Instagram</button>
+            <button class="tab-btn tt" onclick="switchTab('tiktok')">🎵 TikTok</button>
+        </div>
+
+        <!-- INSTAGRAM TAB -->
+        <div id="tab-instagram" class="tab-content active">
+            <div class="card">
+                <label>🔗 LINK POSTINGAN INSTAGRAM</label>
+                <input type="text" id="ig-link" placeholder="https://www.instagram.com/p/..." oninput="detectPlatform(this.value)">
+                <button class="btn-fetch" id="ig-fetch-btn" onclick="fetchComments('instagram')">📥 Ambil Komentar Otomatis</button>
+                <div style="margin-top:10px">
+                    <label style="font-size:12px;color:#6b7280;font-weight:600">🔍 FILTER KOMENTAR</label>
+                    <select id="ig-filter" style="width:100%;padding:10px;border:2px solid #e5e7eb;border-radius:10px;font-size:13px;margin-top:4px;background:white">
+                        <option value="all">Semua Komentar</option>
+                        <option value="tag_store">Tag @grahacomp.purwokerto</option>
+                        <option value="tag_3people">Tag 3 Orang atau Lebih</option>
+                        <option value="tag_store_and_3people">Tag Store + Tag 3 Orang</option>
+                    </select>
+                </div>
+                <div class="status" id="ig-status"></div>
+            </div>
+            <div class="card">
+                <label>💬 KOMENTAR <span class="hint">— Username otomatis terdeteksi dari link postingan</span></label>
+                <textarea id="ig-comments" placeholder="Klik tombol 'Ambil Komentar' atau paste manual...&#10;&#10;Satu @username per baris"></textarea>
+                <div style="display:flex;gap:8px;margin-top:8px">
+                    <button class="btn-copy" onclick="copyAllFromText('ig')" style="flex:1;padding:10px;font-size:13px">📋 Copy Semua Username</button>
+                    <button class="btn-copy" onclick="clearText('ig')" style="padding:10px;font-size:13px">🗑️ Clear</button>
+                </div>
+                <div class="stats">
+                    <div class="stat-box"><div class="num" id="ig-total">0</div><div class="lbl">KOMENTAR</div></div>
+                    <div class="stat-box"><div class="num" id="ig-valid">0</div><div class="lbl">UNIK</div></div>
+                    <div class="stat-box" id="ig-filtered-box" style="display:none;background:#ecfdf5"><div class="num" id="ig-filtered" style="#10b981">0</div><div class="lbl">TERFILTER</div></div>
+                </div>
+            </div>
+            <div class="card">
+                <label>👥 Jumlah Pemenang</label>
+                <div class="winner-ctrl">
+                    <button onclick="adjWinners('ig',-1)">−</button>
+                    <input type="text" id="ig-winners" value="1" readonly>
+                    <button onclick="adjWinners('ig',1)">+</button>
+                </div>
+            </div>
+            <button class="btn-spin" onclick="spin('instagram')">🎰 SPIN WHEEL</button>
+            <div class="winners-list" id="ig-winners-list"></div>
+        </div>
+
+        <!-- TIKTOK TAB -->
+        <div id="tab-tiktok" class="tab-content">
+            <div class="card">
+                <label>🎵 LINK VIDEO TIKTOK</label>
+                <input type="text" id="tt-link" placeholder="https://www.tiktok.com/@user/video/... atau vt.tiktok.com/...">
+                <button class="btn-fetch" id="tt-fetch-btn" onclick="fetchComments('tiktok')">📥 Ambil Komentar Otomatis</button>
+                <div style="margin-top:10px">
+                    <label style="font-size:12px;color:#6b7280;font-weight:600">🔍 FILTER KOMENTAR</label>
+                    <select id="tt-filter" style="width:100%;padding:10px;border:2px solid #e5e7eb;border-radius:10px;font-size:13px;margin-top:4px;background:white">
+                        <option value="all">Semua Komentar</option>
+                        <option value="tag_store">Tag @grahacomppurwokerto</option>
+                        <option value="tag_3people">Tag 3 Orang atau Lebih</option>
+                        <option value="tag_store_and_3people">Tag Store + Tag 3 Orang</option>
+                    </select>
+                </div>
+                <div class="status" id="tt-status"></div>
+            </div>
+            <div class="card">
+                <label>💬 KOMENTAR <span class="hint">— Paste @username TikTok di sini (satu per baris)</span></label>
+                <textarea id="tt-comments" placeholder="Contoh:&#10;@username1&#10;@username2&#10;@username3&#10;&#10;Paste semua username yang komentar di video TikTok"></textarea>
+                <div style="display:flex;gap:8px;margin-top:8px">
+                    <button class="btn-copy" onclick="copyAllFromText('tt')" style="flex:1;padding:10px;font-size:13px">📋 Copy Semua Username</button>
+                    <button class="btn-copy" onclick="clearText('tt')" style="padding:10px;font-size:13px">🗑️ Clear</button>
+                </div>
+                <div class="stats">
+                    <div class="stat-box"><div class="num" id="tt-total">0</div><div class="lbl">KOMENTAR</div></div>
+                    <div class="stat-box"><div class="num" id="tt-valid">0</div><div class="lbl">UNIK</div></div>
+                    <div class="stat-box" id="tt-filtered-box" style="display:none;background:#ecfdf5"><div class="num" id="tt-filtered" style="#10b981">0</div><div class="lbl">TERFILTER</div></div>
+                </div>
+            </div>
+            <div class="card">
+                <label>👥 Jumlah Pemenang</label>
+                <div class="winner-ctrl">
+                    <button onclick="adjWinners('tt',-1)">−</button>
+                    <input type="text" id="tt-winners" value="1" readonly>
+                    <button onclick="adjWinners('tt',1)">+</button>
+                </div>
+            </div>
+            <button class="btn-spin" onclick="spin('tiktok')">🎰 SPIN WHEEL</button>
+            <div class="winners-list" id="tt-winners-list"></div>
+        </div>
+    </div>
+
+    <!-- SPIN OVERLAY -->
+    <div class="overlay" id="spin-overlay">
+        <div class="modal">
+            <div id="wheel-section">
+                <h2 id="wheel-title">🎰 SPIN WHEEL</h2>
+                <div class="wheel-wrap">
+                    <canvas id="wheel" width="320" height="320"></canvas>
+                    <div class="wheel-pointer"></div>
+                </div>
+                <div id="wheel-result" style="margin-top:16px;font-size:18px;font-weight:700;color:#6366f1"></div>
+            </div>
+            <div id="winner-section" class="winner-display">
+                <div class="winner-card">
+                    <div class="trophy">🏆</div>
+                    <div id="winner-name">@username</div>
+                    <div class="tag">SELAMAT! 🎉</div>
+                </div>
+                <div class="winner-actions" id="winner-actions">
+                    <button class="btn-comment" onclick="viewComment()">💬 Lihat Komentar</button>
+                    <button class="btn-profile" id="btn-view-profile" onclick="viewProfile()">👤 Lihat Profil</button>
+                    <button class="btn-whatsapp" id="btn-whatsapp" onclick="copyForWA()">📱 Copy WA</button>
+                </div>
+                <div class="btn-row">
+                    <button class="btn-again" id="btn-spin-again">🎰 Spin Lagi</button>
+                    <button class="btn-copy" onclick="copyWinner()">📋 Copy</button>
+                    <button class="btn-copy" onclick="closeOverlay()">✕ Tutup</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- COMMENT POPUP -->
+    <div class="comment-popup" id="comment-popup">
+        <div class="comment-popup-box">
+            <button class="close-popup" onclick="closeCommentPopup()">✕</button>
+            <h3>💬 Komentar Pemenang</h3>
+            <div class="comment-user" id="popup-comment-user">@username</div>
+            <div class="comment-text" id="popup-comment-text">Memuat komentar...</div>
+        </div>
+    </div>
+
+    <script>
+    // ─── State ───
+    const state = {
+        instagram: { comments: [], commentsData: {}, winners: [], winnerCount: 1, currentWinner: null },
+        tiktok:    { comments: [], commentsData: {}, winners: [], winnerCount: 1, currentWinner: null }
+    };
+
+    // ─── Tab switch ───
+    function switchTab(tab) {
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+        document.getElementById('tab-' + tab).classList.add('active');
+        if (tab === 'instagram') document.querySelector('.tab-btn.ig').classList.add('active');
+        else document.querySelector('.tab-btn.tt').classList.add('active');
+    }
+
+    // ─── Auto-update comment stats ───
+    ['ig','tt'].forEach(p => {
+        document.getElementById(p + '-comments').addEventListener('input', function() {
+            const users = extractUsers(this.value);
+            state[p === 'ig' ? 'instagram' : 'tiktok'].comments = users;
+            document.getElementById(p + '-total').textContent = users.length;
+            document.getElementById(p + '-valid').textContent = new Set(users.map(u=>u.toLowerCase())).size;
+        });
+    });
+
+    function extractUsers(text) {
+        const matches = text.match(/@[\w.]{1,30}/g) || [];
+        return [...new Set(matches.map(m => m.toLowerCase()))];
+    }
+
+    // ─── Winner count ───
+    function adjWinners(p, d) {
+        const s = state[p === 'ig' ? 'instagram' : 'tiktok'];
+        s.winnerCount = Math.max(1, Math.min(50, s.winnerCount + d));
+        document.getElementById(p + '-winners').value = s.winnerCount;
+    }
+
+    // ─── Fetch comments from backend ───
+    async function fetchComments(platform) {
+        const prefix = platform === 'instagram' ? 'ig' : 'tt';
+        const url = document.getElementById(prefix + '-link').value.trim();
+        const statusEl = document.getElementById(prefix + '-status');
+        const btn = document.getElementById(prefix + '-fetch-btn');
+        const filter = document.getElementById(prefix + '-filter').value;
+        
+        if (!url) {
+            statusEl.className = 'status error';
+            statusEl.textContent = '⚠️ Masukkan link postingan terlebih dahulu!';
+            return;
+        }
+        
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner"></span> Mengambil komentar...';
+        statusEl.className = 'status info';
+        statusEl.textContent = '⏳ Sedang mengambil komentar dari postingan...';
+        
+        try {
+            const resp = await fetch('/api/scrape', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ url, filter })
+            });
+            
+            const data = await resp.json();
+            
+            if (data.error) throw new Error(data.error);
+            
+            // Fill textarea with filtered usernames
+            const textarea = document.getElementById(prefix + '-comments');
+            const usernames = data.comments.map(c => '@' + c.username);
+            textarea.value = usernames.join('\n');
+            
+            // Update state
+            const s = state[platform];
+            s.comments = [...new Set(data.comments.map(c => c.username.toLowerCase()))];
+            // Store comment text data for "Lihat Komentar" feature
+            s.commentsData = {};
+            data.comments.forEach(c => {
+                s.commentsData[c.username.toLowerCase()] = {
+                    text: c.text || '',
+                    username: c.username,
+                    mentions: c.mentions || 0,
+                    has_store_tag: c.has_store_tag || false
+                };
+            });
+            
+            // Update stats
+            document.getElementById(prefix + '-total').textContent = data.total_raw;
+            document.getElementById(prefix + '-valid').textContent = data.total_unique;
+            
+            // Show filtered count if filter active
+            const filteredBox = document.getElementById(prefix + '-filtered-box');
+            const filteredNum = document.getElementById(prefix + '-filtered');
+            if (filter !== 'all' && data.total_filtered !== undefined) {
+                filteredNum.textContent = data.total_filtered;
+                filteredBox.style.display = 'block';
+            } else {
+                filteredBox.style.display = 'none';
+            }
+            
+            const filterLabel = filter === 'all' ? '' : ` (filter: ${filter})`;
+            statusEl.className = 'status success';
+            statusEl.textContent = `✅ Berhasil! ${data.total_raw} komentar → ${data.total_unique} unik${filter !== 'all' ? ` → ${data.total_filtered} terfilter` : ''}${filterLabel}`;
+            
+        } catch (err) {
+            statusEl.className = 'status error';
+            statusEl.textContent = '❌ ' + err.message;
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '📥 Ambil Komentar Otomatis';
+        }
+    }
+
+    // ─── SPIN WHEEL ───
+    function spin(platform) {
+        const s = state[platform];
+        const prefix = platform === 'instagram' ? 'ig' : 'tt';
+        const textarea = document.getElementById(prefix + '-comments');
+        
+        // Re-extract from textarea
+        s.comments = extractUsers(textarea.value);
+        
+        if (s.comments.length === 0) {
+            alert('Tidak ada username! Paste komentar atau ambil dari link postingan.');
+            return;
+        }
+        if (s.comments.length < s.winnerCount) {
+            alert('Username kurang dari jumlah pemenang!');
+            return;
+        }
+        
+        // Remove already selected
+        const available = s.comments.filter(u => !s.winners.includes(u));
+        if (available.length === 0) {
+            alert('Semua username sudah menang!');
+            return;
+        }
+        
+        document.getElementById('wheel-title').textContent = 
+            platform === 'instagram' ? '📷 Instagram Giveaway' : '🎵 TikTok Giveaway';
+        
+        document.getElementById('spin-overlay').classList.add('show');
+        document.getElementById('wheel-section').style.display = 'block';
+        document.getElementById('winner-section').classList.remove('show');
+        
+        drawWheel(available);
+        spinWheel(available, platform);
+    }
+
+    function drawWheel(items) {
+        const canvas = document.getElementById('wheel');
+        const ctx = canvas.getContext('2d');
+        const cx = 160, cy = 160, r = 140;
+        const n = Math.min(items.length, 30); // Max 30 slices
+        const shown = items.slice(0, n);
+        const arc = (2 * Math.PI) / n;
+        
+        const colors = [
+            '#FF6B6B','#4ECDC4','#45B7D1','#96CEB4','#FFEAA7',
+            '#DDA0DD','#98D8C8','#F7DC6F','#BB8FCE','#85C1E9',
+            '#F8C471','#82E0AA','#F1948A','#AED6F1','#D7BDE2',
+            '#A3E4D7','#FAD7A0','#A9CCE3','#D5F5E3','#FADBD8'
+        ];
+        
+        ctx.clearRect(0, 0, 320, 320);
+        
+        for (let i = 0; i < n; i++) {
+            const startAngle = arc * i - Math.PI / 2;
+            const endAngle = startAngle + arc;
+            
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            ctx.arc(cx, cy, r, startAngle, endAngle);
+            ctx.fillStyle = colors[i % colors.length];
+            ctx.fill();
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            // Text
+            ctx.save();
+            ctx.translate(cx, cy);
+            ctx.rotate(startAngle + arc / 2);
+            ctx.fillStyle = '#333';
+            ctx.font = n > 15 ? '8px sans-serif' : '10px sans-serif';
+            ctx.textAlign = 'center';
+            const label = shown[i].length > 10 ? shown[i].slice(0, 10) + '..' : shown[i];
+            ctx.fillText(label, r * 0.65, 4);
+            ctx.restore();
+        }
+        
+        // Center circle
+        ctx.beginPath();
+        ctx.arc(cx, cy, 25, 0, 2 * Math.PI);
+        ctx.fillStyle = '#fff';
+        ctx.fill();
+        ctx.strokeStyle = '#ddd';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+    }
+
+    function spinWheel(items, platform) {
+        const canvas = document.getElementById('wheel');
+        let rotation = 0;
+        const n = Math.min(items.length, 30);
+        const totalRotation = (Math.random() * 360 + 360 * 5); // 5+ full rotations
+        const duration = 10000; // 10 detik
+        const start = performance.now();
+        
+        const resultEl = document.getElementById('wheel-result');
+        resultEl.textContent = '🎯 Berputar...';
+        
+        function animate(now) {
+            const elapsed = now - start;
+            const progress = Math.min(elapsed / duration, 1);
+            // Ease out cubic
+            const eased = 1 - Math.pow(1 - progress, 3);
+            rotation = totalRotation * eased;
+            
+            canvas.style.transform = `rotate(${rotation}deg)`;
+            
+            if (progress < 1) {
+                requestAnimationFrame(animate);
+            } else {
+                // Determine winner
+                const finalAngle = rotation % 360;
+                const sliceAngle = 360 / n;
+                // Pointer is at top (270 degrees in standard coords)
+                const winnerIndex = Math.floor(((360 - finalAngle + 270) % 360) / sliceAngle) % n;
+                const winner = items[winnerIndex % items.length];
+                
+                resultEl.textContent = `🏆 ${winner.startsWith('@') ? winner : '@' + winner}`;
+                showWinner(winner, platform);
+            }
+        }
+        
+        requestAnimationFrame(animate);
+    }
+
+    function showWinner(username, platform) {
+        const s = state[platform];
+        const prefix = platform === 'instagram' ? 'ig' : 'tt';
+        
+        s.winners.push(username);
+        s.currentWinner = username;
+        
+        document.getElementById('wheel-section').style.display = 'none';
+        const section = document.getElementById('winner-section');
+        section.classList.add('show');
+        document.getElementById('winner-name').textContent = username.startsWith('@') ? username : '@' + username;
+        
+        // Update winners list
+        const listEl = document.getElementById(prefix + '-winners-list');
+        const medals = ['🥇','🥈','🥉','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟'];
+        
+        let html = `<h3>🏆 Pemenang ${platform === 'instagram' ? 'Instagram' : 'TikTok'}</h3>`;
+        s.winners.forEach((w, i) => {
+            html += `<div class="winner-item"><span class="medal">${medals[i] || '🏅'}</span><span class="wk">${w.startsWith('@') ? w : '@' + w}</span></div>`;
+        });
+        listEl.innerHTML = html;
+        
+        // Spin again button
+        const btnAgain = document.getElementById('btn-spin-again');
+        const available = s.comments.filter(u => !s.winners.includes(u));
+        if (available.length === 0 || s.winners.length >= s.winnerCount) {
+            btnAgain.style.display = 'none';
+        } else {
+            btnAgain.style.display = 'block';
+            btnAgain.onclick = () => {
+                section.classList.remove('show');
+                document.getElementById('wheel-section').style.display = 'block';
+                document.getElementById('wheel').style.transform = 'rotate(0deg)';
+                spin(platform);
+            };
+        }
+        
+        spawnConfetti();
+    }
+
+    function copyWinner() {
+        const name = document.getElementById('winner-name').textContent;
+        navigator.clipboard.writeText(name);
+        alert('Copied!');
+    }
+
+    function closeOverlay() {
+        document.getElementById('spin-overlay').classList.remove('show');
+        document.getElementById('wheel').style.transform = 'rotate(0deg)';
+    }
+
+    function getCurrentPlatform() {
+        return document.querySelector('.tab-btn.ig.active') ? 'instagram' : 'tiktok';
+    }
+
+    function viewComment() {
+        const platform = getCurrentPlatform();
+        const s = state[platform];
+        const winner = s.currentWinner;
+        if (!winner) return;
+
+        const clean = winner.startsWith('@') ? winner.slice(1).toLowerCase() : winner.toLowerCase();
+        const data = s.commentsData[clean];
+        const popup = document.getElementById('comment-popup');
+        document.getElementById('popup-comment-user').textContent = winner.startsWith('@') ? winner : '@' + winner;
+
+        if (data && data.text) {
+            document.getElementById('popup-comment-text').textContent = data.text;
+            document.getElementById('popup-comment-text').className = 'comment-text';
+        } else {
+            document.getElementById('popup-comment-text').innerHTML = '<div class="comment-notfound">Komentar tidak ditemukan atau sudah dihapus</div>';
+            document.getElementById('popup-comment-text').className = 'comment-text';
+        }
+
+        popup.classList.add('show');
+    }
+
+    function closeCommentPopup() {
+        document.getElementById('comment-popup').classList.remove('show');
+    }
+
+    function viewProfile() {
+        const platform = getCurrentPlatform();
+        const s = state[platform];
+        const winner = s.currentWinner;
+        if (!winner) return;
+        const clean = winner.startsWith('@') ? winner.slice(1) : winner;
+
+        let url;
+        if (platform === 'instagram') {
+            url = 'https://www.instagram.com/' + clean;
+        } else {
+            url = 'https://www.tiktok.com/@' + clean;
+        }
+        window.open(url, '_blank');
+    }
+
+    function copyForWA() {
+        const platform = getCurrentPlatform();
+        const s = state[platform];
+        const winner = s.currentWinner;
+        if (!winner) return;
+
+        const data = s.commentsData[winner.startsWith('@') ? winner.slice(1).toLowerCase() : winner.toLowerCase()];
+        let text = `🎉 Pemenang Giveaway Graha Computer!\n\n`;
+        text += `👤 ${winner.startsWith('@') ? winner : '@' + winner}\n`;
+        text += `📱 ${platform === 'instagram' ? 'Instagram' : 'TikTok'}\n`;
+        if (data && data.text) {
+            text += `\n💬 Komentar: "${data.text}"\n`;
+        }
+        if (data && data.has_store_tag) {
+            text += `✅ Tag store\n`;
+        }
+        text += `\nSelamat! 🎊`;
+
+        navigator.clipboard.writeText(text).then(() => {
+            alert('✅ Tersalin! Paste di WhatsApp');
+        });
+    }
+
+    function spawnConfetti() {
+        const colors = ['#ff6b6b','#feca57','#48dbfb','#ff9ff3','#54a0ff','#5f27cd','#01a3a4','#f368e0','#ff9f43','#00d2d3'];
+        for (let i = 0; i < 60; i++) {
+            const piece = document.createElement('div');
+            piece.className = 'confetti-piece';
+            piece.style.left = Math.random() * 100 + 'vw';
+            piece.style.top = '-10px';
+            piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+            piece.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+            piece.style.width = (Math.random() * 8 + 6) + 'px';
+            piece.style.height = (Math.random() * 8 + 6) + 'px';
+            document.body.appendChild(piece);
+            
+            const angle = Math.random() * Math.PI * 2;
+            const velocity = Math.random() * 3 + 2;
+            let x = parseFloat(piece.style.left);
+            let y = -10;
+            let vx = Math.cos(angle) * velocity;
+            let vy = Math.sin(angle) * velocity + 1;
+            let rot = 0;
+            
+            function fall() {
+                x += vx;
+                y += vy;
+                vy += 0.08;
+                rot += 3;
+                piece.style.left = x + 'px';
+                piece.style.top = y + 'px';
+                piece.style.transform = `rotate(${rot}deg)`;
+                
+                if (y < window.innerHeight + 20) {
+                    requestAnimationFrame(fall);
+                } else {
+                    piece.remove();
+                }
+            }
+            requestAnimationFrame(fall);
+        }
+    }
+
+    function copyAllFromText(prefix) {
+        const textarea = document.getElementById(prefix + '-comments');
+        const users = extractUsers(textarea.value);
+        if (users.length === 0) { alert('Tidak ada username di kolom!'); return; }
+        navigator.clipboard.writeText(users.map(u => '@' + u).join('\n'));
+        alert(`Copied ${users.length} username!`);
+    }
+
+    function clearText(prefix) {
+        document.getElementById(prefix + '-comments').value = '';
+        const evt = new Event('input');
+        document.getElementById(prefix + '-comments').dispatchEvent(evt);
+    }
+
+    function detectPlatform(url) {
+        if (url.includes('instagram.com')) switchTab('instagram');
+        else if (url.includes('tiktok.com')) switchTab('tiktok');
+    }
+    </script>
+</body>
+</html>
